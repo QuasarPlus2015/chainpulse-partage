@@ -157,6 +157,8 @@
 <script>
 const SUPABASE_URL = 'https://dvveswkpyxqscyozzaqg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_CJI_sDeM9vKW0HG-TzfePg_fhEdnwn1';
+// Même numéro de version que l'application (APP_VERSION dans chainpulse.html), à tenir à jour avec elle.
+const APP_VERSION = '1.0.0';
 const TERM_LABELS = { court: 'Court terme', moyen: 'Moyen terme', long: 'Long terme' };
 const STATUS_LABELS = { a_demarrer: 'À démarrer', en_cours: 'En cours', termine: 'Terminée', abandonne: 'Abandonnée', non_retenu: 'Non retenue par le client' };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -416,7 +418,7 @@ function renderGantt() {
       ${pillarBlocksHtml}
     </div>
     ${undatedHtml}
-    <div class="footer-note">Vue en lecture seule — généré par ChainPulse.</div>
+    <div class="footer-note">Vue en lecture seule — généré par ChainPulse v${APP_VERSION}</div>
   `;
 
   attachCommon(app);
@@ -629,7 +631,7 @@ function renderResources() {
     ${headerHtml()}
     ${tabsHtml()}
     ${buildResourcesHtml()}
-    <div class="footer-note">Vue en lecture seule — généré par ChainPulse.</div>
+    <div class="footer-note">Vue en lecture seule — généré par ChainPulse v${APP_VERSION}</div>
   `;
   attachCommon(app);
   app.querySelectorAll('[data-rv-row]').forEach(el => el.onclick = () => { state.resOpen[el.dataset.rvRow] = !state.resOpen[el.dataset.rvRow]; render(); });
