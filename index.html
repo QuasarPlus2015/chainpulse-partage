@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>ChainPulse — Audit Score by QUASAR+ — Plan de progrès (partage)</title>
+<title>ChainPulse — Supply Chain Audit by QUASAR+ — Plan de progrès (partage)</title>
 <style>
   :root {
     --bg: #1a1a1a; --surface: #232323; --surface-2: #2a2a2a; --border: #3a3a3a;
@@ -24,6 +24,7 @@
   header.top .brand-word { display: flex; flex-direction: column; line-height: 1.15; }
   header.top .brand-word strong { font-family: var(--font-display); font-weight: 700; font-size: 1.08rem; letter-spacing: 0.2px; color: var(--ink); }
   header.top .brand-word span { font-size: 0.64rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  header.top .brand-word span.l2 { text-transform: none; letter-spacing: 0.02em; font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
   header.top .brand-view { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--border); font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; color: var(--accent); }
   header.top .brand-mark { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--accent); box-shadow: 0 0 0 2px rgba(214,19,19,0.14); }
   header.top .brand { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: var(--accent); }
@@ -39,6 +40,8 @@
   .term-dot-court { background: var(--danger); } .term-dot-moyen { background: var(--amber); } .term-dot-long { background: var(--good); }
   .global-stats { display: flex; align-items: center; gap: 16px; padding-left: 14px; border-left: 1px solid var(--border); font-size: 0.78rem; color: var(--ink-soft); }
   .global-stats strong { color: var(--ink); font-family: var(--font-mono); }
+  .fold-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; color: var(--ink-soft); cursor: pointer; }
+  .fold-btn:hover { color: var(--ink); background: var(--surface-2); }
   .zoom-control { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
   .zoom-btn { padding: 6px 14px; font-size: 0.75rem; font-weight: 700; background: none; border: none; border-right: 1px solid var(--border); color: var(--ink-soft); cursor: pointer; }
   .zoom-btn:last-child { border-right: none; }
@@ -335,7 +338,17 @@ function openActionModal(a) {
   wrap.querySelector('#am-close').onclick = () => wrap.remove();
 }
 
-function toolbarHtml(termFilter, zoom, globalStats) {
+const FOLD_OPEN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>';
+const FOLD_CLOSE_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></svg>';
+function foldAllOpen(kind) {
+  if (kind === 'rv') { const ks = state.resKeys || []; return ks.length > 0 && ks.every(k => state.resOpen[k]) && !!state.resUnOpen; }
+  const ks = state.ganttKeys || []; return ks.length > 0 && ks.every(k => state.pillarOpen[k] === true);
+}
+function foldBtnHtml(kind) {
+  const all = foldAllOpen(kind);
+  return `<div class="fold-control"><button type="button" class="fold-btn" data-fold="${kind}">${all ? FOLD_CLOSE_SVG + 'Tout replier' : FOLD_OPEN_SVG + 'Tout déplier'}</button></div>`;
+}
+function toolbarHtml(termFilter, zoom, globalStats, foldKind) {
   return `
     <div class="toolbar">
       <div class="term-chips">
@@ -349,6 +362,7 @@ function toolbarHtml(termFilter, zoom, globalStats) {
           <span>Actions en retard : <strong>${globalStats.lateCount}</strong></span>
         </div>
       </div>
+      ${foldKind ? foldBtnHtml(foldKind) : ''}
       <div class="zoom-control">
         ${['quarter', 'month', 'week'].map(z => `<button type="button" class="zoom-btn ${zoom === z ? 'active' : ''}" data-zoom="${z}">${z === 'quarter' ? 'Trimestre' : z === 'month' ? 'Mois' : 'Semaine'}</button>`).join('')}
       </div>
@@ -364,6 +378,12 @@ function tabsHtml() {
 function attachCommon(app) {
   app.querySelectorAll('[data-view]').forEach(el => el.onclick = () => { state.view = el.dataset.view; render(); });
   app.querySelectorAll('[data-term]').forEach(el => el.onclick = () => { state.term = el.dataset.term || null; render(); });
+  app.querySelectorAll('[data-fold]').forEach(el => el.onclick = () => {
+    const kind = el.dataset.fold, open = !foldAllOpen(kind);
+    if (kind === 'rv') { state.resOpen = {}; (state.resKeys || []).forEach(k => { state.resOpen[k] = open; }); state.resUnOpen = open; }
+    else { (state.ganttKeys || []).forEach(k => { state.pillarOpen[k] = open; }); }
+    render();
+  });
   app.querySelectorAll('[data-zoom]').forEach(el => el.onclick = () => { state.zoom = el.dataset.zoom; render(); });
   app.querySelectorAll('[data-action-id]').forEach(el => el.onclick = (e) => {
     e.stopPropagation();
@@ -377,7 +397,7 @@ function headerHtml() {
     <header class="top">
       <div class="brand-group">
         <span class="brand-q"><svg viewBox="-48.5 -52.5 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="QUASAR+" role="img"><circle cx="-10" cy="2" r="30" fill="none" stroke="currentColor" stroke-width="11"/><path d="M2 14 L24 36" stroke="currentColor" stroke-width="11" stroke-linecap="round" fill="none"/><path d="M34 -42 V-22 M24 -32 H44" stroke="#F2A33A" stroke-width="9" stroke-linecap="round" fill="none"/></svg></span>
-        <div class="brand-word"><strong>ChainPulse</strong><span>Audit SCOR<br>by QUASAR+</span></div>
+        <div class="brand-word"><strong>ChainPulse</strong><span class="l2">Supply Chain Audit</span><span>by QUASAR+</span></div>
         <div class="brand-view">${(DATA.views || []).length === 1 && DATA.views[0] === 'radar' ? 'Radar de maturité' : 'Plan de progrès'}</div>
       </div>
       </div>
@@ -415,10 +435,11 @@ function renderGantt() {
   }
 
   const globalStats = pillarStats(dated);
+  state.ganttKeys = pillarBlocks.map(b => String(b.pillar.id));
 
   const pillarBlocksHtml = pillarBlocks.length ? pillarBlocks.map(({ pillar, items }) => {
     const { totalDays, avgPct, minStart, maxEnd, lateCount, allDone } = pillarStats(items);
-    const isOpen = state.pillarOpen[pillar.id] !== false;
+    const isOpen = state.pillarOpen[pillar.id] === true;
     let barHtml = '';
     if (minStart && maxEnd && range) {
       let leftPct = ganttDateToPct(minStart, range), rightPct = ganttDateToPct(maxEnd, range);
@@ -467,7 +488,7 @@ function renderGantt() {
   app.innerHTML = `
     ${headerHtml()}
     ${tabsHtml()}
-    ${toolbarHtml(termFilter, zoom, globalStats)}
+    ${toolbarHtml(termFilter, zoom, globalStats, 'gantt')}
     <div class="card">
       ${range ? `<div class="axis"><div class="axis-spacer"></div><div class="axis-track">${axisHtml}</div><div class="axis-pct">Avancement</div></div>` : ''}
       ${pillarBlocksHtml}
@@ -479,7 +500,7 @@ function renderGantt() {
   attachCommon(app);
   app.querySelectorAll('[data-pillar-id]').forEach(el => el.onclick = () => {
     const pid = el.dataset.pillarId;
-    state.pillarOpen[pid] = state.pillarOpen[pid] === false ? true : false;
+    state.pillarOpen[pid] = state.pillarOpen[pid] === true ? false : true;
     render();
   });
 }
@@ -603,6 +624,7 @@ function buildResourcesHtml() {
   const isOpenRow = (k) => !!(state.resOpen && state.resOpen[k]);
   const cellFont = n > 40 ? 'font-size:0;' : n > 22 ? 'font-size:.6rem;' : '';
 
+  state.resKeys = resList.map(r => r.key);
   let rowsHtml = resList.map(r => {
     const open = isOpenRow(r.key);
     const initials = r.name.split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
@@ -669,7 +691,7 @@ function buildResourcesHtml() {
     </div>`;
 
   return `
-    ${toolbarHtml(termFilter, zoom, { totalDays: gCum, avgPct: gAvg, lateCount: gLate })}
+    ${toolbarHtml(termFilter, zoom, { totalDays: gCum, avgPct: gAvg, lateCount: gLate }, 'rv')}
     ${kpisHtml}
     <div class="rv-card">
       <div class="rv-grid-head"><div></div><div>${headHtml}</div><div class="rv-col-title">Synthèse</div></div>
@@ -700,12 +722,12 @@ function renderResources() {
 // (notes de l'audit, pondérations, périmètre ; « après actions » = actions terminées).
 // ============================================================
 const PILLAR_ICON_SVG = {
-  Plan: '<path d="M8 3v3M16 3v3M4 8h16"/><rect x="4" y="5" width="16" height="16" rx="2"/><path d="m9 15 2 2 4-4"/>',
-  Source: '<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/>',
-  Make: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
-  Deliver: '<rect x="1" y="6" width="14" height="12" rx="1"/><path d="M15 10h4l4 4v4h-8Z"/><circle cx="6" cy="20" r="2"/><circle cx="17.5" cy="20" r="2"/>',
-  Return: '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 5 5v6"/>',
-  Enable: '<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="4"/>',
+  'Anticiper': '<path d="M8 3v3M16 3v3M4 8h16"/><rect x="4" y="5" width="16" height="16" rx="2"/><path d="m9 15 2 2 4-4"/>',
+  'Sécuriser': '<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/>',
+  'Transformer': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  'Servir': '<rect x="1" y="6" width="14" height="12" rx="1"/><path d="M15 10h4l4 4v4h-8Z"/><circle cx="6" cy="20" r="2"/><circle cx="17.5" cy="20" r="2"/>',
+  'Valoriser': '<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 5 5v6"/>',
+  'Fiabiliser': '<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/><circle cx="12" cy="12" r="4"/>',
 };
 const PILLAR_ICON_FALLBACK = '<circle cx="12" cy="12" r="9"/>';
 const RADAR_LEVELS = [
@@ -750,8 +772,10 @@ function buildRadarSvg(items, size, series) {
     // obliques) et se place verticalement du côté opposé au centre du
     // graphique par rapport au libellé — donc toujours vers l'extérieur,
     // qu'on soit sur l'axe du haut ou du bas.
+    const dirOut = Math.sin(a) >= 0 ? 1 : -1;
     const ix = lx;
-    const iy = ly + (Math.sin(a) >= 0 ? 22 : -22);
+    const iy = ly;
+    const tly = it.icon ? ly + dirOut * 22 : ly;
     const iconSvg = it.icon
       ? `<svg x="${(ix - 9).toFixed(1)}" y="${(iy - 9).toFixed(1)}" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${labelColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;">${it.icon}</svg>`
       : '';
@@ -759,7 +783,7 @@ function buildRadarSvg(items, size, series) {
       ? `<circle class="radar-icon-hit" data-radar-pillar-icon="${esc(String(it.pillarId))}" cx="${ix}" cy="${iy}" r="14" style="fill:transparent;cursor:pointer;"><title>${esc(it.title || '')}</title></circle>`
       : '';
     return `<line class="axis" x1="${center}" y1="${center}" x2="${x2}" y2="${y2}"></line>
-      <text x="${lx}" y="${ly}" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="middle" style="fill:${labelColor};">${titleTag}${esc(it.label)}</text>
+      <text x="${lx}" y="${tly}" font-size="10" font-weight="700" text-anchor="middle" dominant-baseline="middle" style="fill:${labelColor};">${titleTag}${esc(it.label)}</text>
       ${iconHit}${iconSvg}`;
   }).join('');
   // Une ou plusieurs courbes (audit précédent, actuel, après actions, projection) :
@@ -823,7 +847,7 @@ function renderRadar() {
   const drillG = state.radarDrill != null ? M.groups.find(p => String(p.id) === String(state.radarDrill)) : null;
   let items, vals, prevOk;
   if (!drillG) {
-    items = M.groups.map(p => ({ label: p.code || p.name.charAt(0), title: p.name, score: M.pScore(p.id, false), icon: PILLAR_ICON_SVG[p.name] || PILLAR_ICON_FALLBACK, pillarId: p.id }));
+    items = M.groups.map(p => ({ label: String(p.name).toUpperCase(), title: p.name, score: M.pScore(p.id, false), icon: PILLAR_ICON_SVG[p.name] || PILLAR_ICON_FALLBACK, pillarId: p.id }));
     vals = {
       prev: M.groups.map(p => (prev && prev.pillars && prev.pillars[p.id] != null) ? Number(prev.pillars[p.id]) : null),
       now: items.map(it => it.score),
